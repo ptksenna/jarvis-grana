@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Jarvis Grana</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+:root{--bg:#000;--card:#0b0f0b;--line:#1a2a1a;--neon:#39ff14;--neon2:#00ff88;--txt:#e9ffe9;--mut:#7d9a7d;--red:#ff3b5c}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh;padding:16px 16px 40px;max-width:520px;margin:0 auto}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+h1{font-size:22px;letter-spacing:2px}
+h1 span{color:var(--neon);text-shadow:0 0 12px var(--neon)}
+.icon-btn{background:none;border:1px solid var(--line);color:var(--mut);border-radius:10px;padding:8px 12px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px}
+.big{font-size:40px;font-weight:800;color:var(--neon);text-shadow:0 0 18px rgba(57,255,20,.45)}
+.big.red{color:var(--red);text-shadow:0 0 18px rgba(255,59,92,.45)}
+.lbl{font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:1px}
+.row{display:flex;justify-content:space-between;gap:10px;margin-top:12px}
+.row div{flex:1}
+.row b{display:block;font-size:18px;margin-top:3px}
+.bar{height:10px;border-radius:10px;background:#111;margin-top:14px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--neon2),var(--neon));box-shadow:0 0 10px var(--neon);transition:width .4s}
+.bar i.red{background:var(--red);box-shadow:0 0 10px var(--red)}
+.mic-wrap{display:flex;flex-direction:column;align-items:center;margin:26px 0 14px}
+#mic{width:120px;height:120px;border-radius:50%;border:3px solid var(--neon);background:radial-gradient(circle,#0f2a0f,#000);color:var(--neon);display:flex;align-items:center;justify-content:center;box-shadow:0 0 25px rgba(57,255,20,.4);cursor:pointer}
+#mic svg{width:52px;height:52px}
+#mic.on{background:var(--neon);color:#000;animation:pulse 1.2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(57,255,20,.7)}70%{box-shadow:0 0 0 28px rgba(57,255,20,0)}100%{box-shadow:0 0 0 0 rgba(57,255,20,0)}}
+#status{margin-top:14px;color:var(--mut);font-size:15px;text-align:center;min-height:22px}
+#heard{margin-top:6px;color:var(--txt);font-size:16px;text-align:center;min-height:22px;font-style:italic}
+.hint{font-size:13px;color:var(--mut);line-height:1.6}
+.hint em{color:var(--neon);font-style:normal}
+.typed{display:flex;gap:8px;margin-top:10px}
+.typed input{flex:1;background:#050805;border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:12px;font-size:16px}
+.typed button{background:var(--neon);color:#000;border:0;border-radius:12px;padding:0 16px;font-weight:700}
+ul{list-style:none}
+li{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line)}
+li:last-child{border:0}
+li .d{font-size:15px}
+li .t{font-size:12px;color:var(--mut);margin-top:2px}
+li .v{font-weight:700;margin-right:10px}
+li .v.out{color:var(--red)} li .v.in{color:var(--neon)}
+li button{background:none;border:0;color:var(--mut);font-size:18px;padding:4px 6px}
+.empty{color:var(--mut);font-size:14px;text-align:center;padding:10px}
+footer{text-align:center;color:#2f4a2f;font-size:12px;margin-top:20px}
+dialog{background:var(--card);color:var(--txt);border:1px solid var(--neon);border-radius:18px;padding:20px;max-width:340px;width:90%;margin:auto}
+dialog::backdrop{background:rgba(0,0,0,.8)}
+dialog h3{color:var(--neon);margin-bottom:10px}
+dialog label{display:block;font-size:13px;color:var(--mut);margin-top:12px}
+dialog input,dialog select{width:100%;background:#050805;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:10px;font-size:16px;margin-top:4px}
+dialog .acts{display:flex;gap:8px;margin-top:18px}
+dialog .acts button{flex:1;padding:12px;border-radius:12px;border:1px solid var(--line);background:none;color:var(--txt);font-size:15px}
+dialog .acts .ok{background:var(--neon);color:#000;border:0;font-weight:700}
+.danger{color:var(--red)!important;border-color:var(--red)!important}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>JARVIS <span>GRANA</span></h1>
+  <button class="icon-btn" id="btnCfg">⚙ Ajustar</button>
+</header>
+
+<section class="card">
+  <div class="lbl">Ainda posso usar</div>
+  <div class="big" id="restante">R$ 0,00</div>
+  <div class="bar"><i id="barra"></i></div>
+  <div class="row">
+    <div><span class="lbl">Limite</span><b id="limite">R$ 0,00</b></div>
+    <div><span class="lbl">Já usei</span><b id="usado">R$ 0,00</b></div>
+    <div><span class="lbl">Saldo</span><b id="saldo">R$ 0,00</b></div>
+  </div>
+  <div class="hint" id="periodo" style="margin-top:12px"></div>
+</section>
+
+<div class="mic-wrap">
+  <button id="mic" aria-label="Falar com o Jarvis">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+  </button>
+  <div id="status">Aperte, fale, e aperte de novo</div>
+  <div id="heard"></div>
+</div>
+
+<section class="card">
+  <div class="hint">
+    Exemplos do que falar:<br>
+    <em>"Jarvis, usei 1 real de pão"</em><br>
+    <em>"usei 25 e 50 no mercado"</em><br>
+    <em>"tenho 100 e esse mês posso usar 80"</em><br>
+    <em>"tenho 500 e posso usar 300 em 15 dias"</em><br>
+    <em>"recebi 50"</em> · <em>"quanto ainda posso usar?"</em> · <em>"apaga o último"</em>
+  </div>
+  <div class="typed">
+    <input id="txt" placeholder="ou digite aqui..." autocomplete="off">
+    <button id="btnTxt">OK</button>
+  </div>
+</section>
+
+<section class="card">
+  <div class="lbl" style="margin-bottom:6px">Onde usei</div>
+  <ul id="lista"></ul>
+</section>
+
+<footer>Jarvis Grana · seus dados ficam só neste aparelho</footer>
+
+<dialog id="cfg">
+  <h3>Ajustar período</h3>
+  <label>Quanto eu tenho (R$)<input id="cSaldo" type="number" inputmode="decimal" step="0.01"></label>
+  <label>Quanto posso usar (R$)<input id="cLimite" type="number" inputmode="decimal" step="0.01"></label>
+  <label>Período
+    <select id="cPer">
+      <option value="mes">Até o fim do mês</option>
+      <option value="15">15 dias</option>
+      <option value="30">30 dias</option>
+    </select>
+  </label>
+  <div class="acts">
+    <button id="cCancel">Cancelar</button>
+    <button class="ok" id="cSave">Salvar</button>
+  </div>
+  <div class="acts"><button class="danger" id="cReset">Zerar tudo</button></div>
+</dialog>
+
+<script>
+(() => {
+const KEY = 'jarvisGrana.v1';
+const $ = id => document.getElementById(id);
+const brl = v => 'R$ ' + (Math.round(v * 100) / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+let st = load();
+function load() {
+  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.mov) return s; } catch (e) {}
+  return {saldoIni: 0, limite: 0, inicio: Date.now(), fim: fimDoMes(Date.now()), tipo: 'mes', mov: [], avisado: false};
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
+
+function fimDoMes(t) { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59).getTime(); }
+function novoPeriodo(saldo, limite, tipo) {
+  const now = Date.now();
+  st.saldoIni = saldo; st.limite = limite; st.tipo = tipo; st.inicio = now; st.avisado = false;
+  st.fim = tipo === 'mes' ? fimDoMes(now) : now + Number(tipo) * 86400000;
+  st.mov = st.mov.filter(m => m.t >= now); // começa período limpo
+  save(); render();
+}
+
+const noPeriodo = () => st.mov.filter(m => m.t >= st.inicio);
+const usado = () => noPeriodo().filter(m => m.v < 0).reduce((a, m) => a - m.v, 0);
+const entradas = () => noPeriodo().filter(m => m.v > 0).reduce((a, m) => a + m.v, 0);
+const restante = () => st.limite - usado();
+const saldo = () => st.saldoIni + entradas() - usado();
+
+function render() {
+  const r = restante(), u = usado();
+  $('restante').textContent = brl(r);
+  $('restante').classList.toggle('red', st.limite > 0 && r <= 0);
+  $('limite').textContent = brl(st.limite);
+  $('usado').textContent = brl(u);
+  $('saldo').textContent = brl(saldo());
+  const pct = st.limite > 0 ? Math.min(100, u / st.limite * 100) : 0;
+  $('barra').style.width = pct + '%';
+  $('barra').classList.toggle('red', pct >= 100);
+  const dias = Math.max(0, Math.ceil((st.fim - Date.now()) / 86400000));
+  $('periodo').textContent = st.limite > 0
+    ? `Período até ${new Date(st.fim).toLocaleDateString('pt-BR')} · faltam ${dias} dia${dias === 1 ? '' : 's'}` + (r > 0 && dias > 0 ? ` · dá ${brl(r / dias)} por dia` : '')
+    : 'Toque no microfone e diga quanto você tem e quanto pode usar.';
+  const ul = $('lista'); ul.innerHTML = '';
+  const itens = noPeriodo().slice().reverse();
+  if (!itens.length) { ul.innerHTML = '<div class="empty">Nada anotado ainda</div>'; return; }
+  for (const m of itens) {
+    const li = document.createElement('li');
+    const d = new Date(m.t);
+    li.innerHTML = `<div><div class="d"></div><div class="t">${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</div></div>
+      <div style="display:flex;align-items:center"><span class="v ${m.v < 0 ? 'out' : 'in'}">${m.v < 0 ? '-' : '+'} ${brl(Math.abs(m.v))}</span><button aria-label="apagar">✕</button></div>`;
+    li.querySelector('.d').textContent = m.d;
+    li.querySelector('button').onclick = () => { if (confirm('Apagar "' + m.d + '"?')) { st.mov = st.mov.filter(x => x !== m); checaLimite(); save(); render(); } };
+    ul.appendChild(li);
+  }
+}
+
+// ---------- Fala (resposta do Jarvis) ----------
+function falar(t) {
+  $('status').textContent = t;
+  try { const u = new SpeechSynthesisUtterance(t); u.lang = 'pt-BR'; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {}
+}
+
+// ---------- Números falados ----------
+const NUM = {zero:0,um:1,uma:1,dois:2,duas:2,'três':3,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,onze:11,doze:12,treze:13,quatorze:14,catorze:14,quinze:15,dezesseis:16,dezessete:17,dezoito:18,dezenove:19,vinte:20,trinta:30,quarenta:40,cinquenta:50,sessenta:60,setenta:70,oitenta:80,noventa:90,cem:100,cento:100,duzentos:200,trezentos:300,quatrocentos:400,quinhentos:500,seiscentos:600,setecentos:700,oitocentos:800,novecentos:900};
+function palavrasParaNumeros(s) {
+  // converte sequências como "cento e vinte e cinco", "dois mil e quinhentos"
+  const toks = s.split(/\s+/); const out = []; let i = 0;
+  while (i < toks.length) {
+    const w = toks[i];
+    if (NUM[w] !== undefined || w === 'mil') {
+      let total = 0, cur = 0, j = i, last = i;
+      while (j < toks.length) {
+        const t = toks[j];
+        if (NUM[t] !== undefined) { cur += NUM[t]; last = j; j++; }
+        else if (t === 'mil') { total += (cur || 1) * 1000; cur = 0; last = j; j++; }
+        else if (t === 'e' && j + 1 < toks.length && (NUM[toks[j + 1]] !== undefined)) { j++; }
+        else break;
+      }
+      out.push(String(total + cur)); i = last + 1;
+    } else { out.push(w); i++; }
+  }
+  return out.join(' ');
+}
+function normaliza(s) {
+  s = s.toLowerCase().replace(/^\s*jarvis[,!.]?\s*/, '').replace(/r\$\s*/g, '');
+  s = s.replace(/(\d)\.(\d{3})(?!\d)/g, '$1$2'); // 1.000 -> 1000
+  s = s.replace(/(\d),(\d{1,2})(?!\d)/g, '$1.$2'); // 1,50 -> 1.50
+  s = s.replace(/\bvírgula\b|\bvirgula\b/g, ',');
+  s = palavrasParaNumeros(s);
+  s = s.replace(/(\d+)\s*,\s*(\d{1,2})\b/g, '$1.$2');
+  // "25 reais e 50 (centavos)" ou "25 e 50" -> 25.50
+  s = s.replace(/(\d+)\s*(?:reais|real|conto|contos|pila)?\s+e\s+(\d{1,2})(?:\s*centavos?)?(?!\d)/g, (m, a, b) => a + '.' + b.padStart(2, '0'));
+  s = s.replace(/(\d+)\s*centavos?/g, (m, a) => (Number(a) / 100).toString());
+  return s.replace(/\s+/g, ' ').trim();
+}
+const nums = s => (s.match(/\d+(?:\.\d+)?/g) || []).map(Number);
+
+function descricao(s) {
+  let m = s.match(/\b(?:de|do|da|no|na|nos|nas|com|em|pro|pra|para)\s+(.+)$/);
+  let d = m ? m[1] : s.replace(/\d+(?:\.\d+)?/g, '').replace(/\b(usei|gastei|paguei|comprei|reais|real|conto|contos|pila)\b/g, '');
+  d = d.replace(/\d+(?:\.\d+)?\s*(reais|real)?/g, '').replace(/\s+/g, ' ').trim();
+  return d ? d.charAt(0).toUpperCase() + d.slice(1) : 'Sem descrição';
+}
+
+// ---------- Interpreta comando ----------
+function comando(raw) {
+  $('heard').textContent = '“' + raw + '”';
+  const s = normaliza(raw);
+  const n = nums(s);
+
+  if (/\b(apaga|apagar|desfaz|desfazer|cancela)\b.*(último|ultimo|última|ultima)/.test(s)) {
+    const p = noPeriodo(); if (!p.length) return falar('Não tem nada pra apagar.');
+    const last = p[p.length - 1]; st.mov = st.mov.filter(x => x !== last); checaLimite(); save(); render();
+    return falar('Apaguei ' + last.d + ' de ' + brl(Math.abs(last.v)) + '.');
+  }
+  if (/\b(quanto|resta|sobra|sobrou|saldo)\b/.test(s) && !n.length) {
+    if (!st.limite) return falar('Você ainda não me disse quanto pode usar.');
+    return falar('Você ainda pode usar ' + brl(Math.max(0, restante())) + '. Seu saldo é ' + brl(saldo()) + '.');
+  }
+  if (/\b(tenho|posso usar|meu limite|limite)\b/.test(s) && n.length && !/\b(usei|gastei|paguei|comprei)\b/.test(s)) {
+    let saldoV, limiteV;
+    const mT = s.match(/tenho\s+(\d+(?:\.\d+)?)/), mP = s.match(/(?:posso usar|limite(?: de| é)?)\s*(?:só|so|somente|apenas)?\s*(\d+(?:\.\d+)?)/);
+    saldoV = mT ? Number(mT[1]) : (n.length > 1 ? n[0] : st.saldoIni);
+    limiteV = mP ? Number(mP[1]) : (n.length > 1 ? n[1] : n[0]);
+    if (!mT && !mP && n.length === 1) saldoV = limiteV;
+    let tipo = 'mes';
+    const mD = s.match(/(\d+)\s*dias/); if (mD && (mD[1] === '15' || mD[1] === '30')) tipo = mD[1];
+    else if (mD) tipo = mD[1];
+    novoPeriodo(saldoV, limiteV, tipo);
+    return falar('Beleza. Você tem ' + brl(saldoV) + ' e pode usar ' + brl(limiteV) + (tipo === 'mes' ? ' até o fim do mês.' : ' nos próximos ' + tipo + ' dias.'));
+  }
+  if (/\b(recebi|ganhei|entrou|caiu)\b/.test(s) && n.length) {
+    const v = n[0]; st.mov.push({t: Date.now(), v: v, d: /\b(de|do|da)\s+/.test(s) ? descricao(s) : 'Entrada'}); save(); render();
+    return falar('Anotado, entrou ' + brl(v) + '. Saldo agora: ' + brl(saldo()) + '.');
+  }
+  if (n.length) {
+    const v = n[0], d = descricao(s);
+    st.mov.push({t: Date.now(), v: -v, d}); save();
+    const bateu = checaLimite(); render();
+    if (bateu) return;
+    return falar('Anotado: ' + brl(v) + (d !== 'Sem descrição' ? ' de ' + d.toLowerCase() : '') + '.' + (st.limite ? ' Ainda pode usar ' + brl(restante()) + '.' : ''));
+  }
+  falar('Não entendi o valor. Tenta de novo, tipo: usei 10 reais de lanche.');
+}
+
+// ---------- Único alerta: bateu o limite ----------
+function checaLimite() {
+  if (!st.limite) return false;
+  if (restante() > 0) { st.avisado = false; return false; }
+  if (st.avisado) return false;
+  st.avisado = true; save();
+  const msg = 'Atenção: você bateu o limite de ' + brl(st.limite) + ' desse período.';
+  falar(msg);
+  try {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then(r => r.showNotification('Jarvis Grana', {body: msg, icon: 'icon.svg'}));
+      else new Notification('Jarvis Grana', {body: msg, icon: 'icon.svg'});
+    }
+  } catch (e) {}
+  setTimeout(() => alert(msg), 300);
+  return true;
+}
+function pedirPermissaoAviso() {
+  try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {}
+}
+
+// ---------- Microfone ----------
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, ouvindo = false, texto = '';
+$('mic').onclick = () => {
+  pedirPermissaoAviso();
+  if (!SR) { falar('Seu navegador não tem reconhecimento de voz. Use o Chrome ou digite abaixo.'); return; }
+  if (ouvindo) { rec.stop(); return; }
+  rec = new SR(); rec.lang = 'pt-BR'; rec.interimResults = true; rec.continuous = true; texto = '';
+  rec.onresult = e => {
+    let fin = '', tmp = '';
+    for (let i = 0; i < e.results.length; i++) { if (e.results[i].isFinal) fin += e.results[i][0].transcript + ' '; else tmp += e.results[i][0].transcript; }
+    texto = (fin + tmp).trim(); $('heard').textContent = texto;
+  };
+  rec.onerror = e => { if (e.error === 'not-allowed') falar('Libere o microfone para o Jarvis nas permissões do navegador.'); };
+  rec.onend = () => { ouvindo = false; $('mic').classList.remove('on'); if (texto) comando(texto); else $('status').textContent = 'Aperte, fale, e aperte de novo'; };
+  try { speechSynthesis.cancel(); } catch (e) {}
+  rec.start(); ouvindo = true; $('mic').classList.add('on'); $('status').textContent = 'Ouvindo... aperte de novo quando terminar'; $('heard').textContent = '';
+};
+
+$('btnTxt').onclick = () => { const v = $('txt').value.trim(); if (v) { comando(v); $('txt').value = ''; } };
+$('txt').onkeydown = e => { if (e.key === 'Enter') $('btnTxt').click(); };
+
+// ---------- Ajustes ----------
+$('btnCfg').onclick = () => { $('cSaldo').value = st.saldoIni || ''; $('cLimite').value = st.limite || ''; $('cPer').value = ['mes', '15', '30'].includes(st.tipo) ? st.tipo : 'mes'; $('cfg').showModal(); };
+$('cCancel').onclick = () => $('cfg').close();
+$('cSave').onclick = () => { novoPeriodo(Number($('cSaldo').value) || 0, Number($('cLimite').value) || 0, $('cPer').value); $('cfg').close(); };
+$('cReset').onclick = () => { if (confirm('Apagar todos os dados do Jarvis?')) { try { localStorage.removeItem(KEY); } catch (e) {} st = load(); render(); $('cfg').close(); } };
+
+// período venceu? avisa para começar outro
+if (st.limite && Date.now() > st.fim) $('status').textContent = 'O período acabou. Diga quanto tem e quanto pode usar agora.';
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+window.__jarvis = {comando, normaliza, get st() { return st; }};
+render();
+})();
+</script>
+</body>
+</html>
