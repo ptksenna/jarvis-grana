@@ -170,6 +170,9 @@ body{padding-bottom:110px}
       <option value="30">30 dias</option>
     </select>
   </label>
+  <label>Voz do Jarvis
+    <select id="cVoz"></select>
+  </label>
   <div class="acts">
     <button id="cCancel">Cancelar</button>
     <button class="ok" id="cSave">Salvar</button>
@@ -234,10 +237,38 @@ function render() {
 }
 
 // ---------- Fala (resposta do Jarvis) ----------
-function falar(t) {
-  $('status').textContent = t;
-  try { const u = new SpeechSynthesisUtterance(t); u.lang = 'pt-BR'; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {}
+// fala: mostra o texto completo na tela, mas a voz pode dizer só uma palavra (ex.: "Anotado")
+const VOZ = 'jarvisGrana.voz';
+const MASC = /(daniel|antonio|ant[oô]nio|felipe|ricardo|humberto|fabio|f[aá]bio|julio|j[uú]lio|donato|nicolau|valerio|val[eé]rio|leonardo|thiago|macerio|male|masculin|homem|pt-br-x-ptd|ptd-|pt-br-x-ptc|reed|eddy|grandpa|rocko)/i;
+const FEM = /(maria|francisca|luciana|fernanda|thalita|leila|let[ií]cia|manuela|brenda|elza|giovanna|yara|female|feminin|mulher|afs|pte-|shelley|sandy|flo|grandma)/i;
+function vozesPt() { try { return speechSynthesis.getVoices().filter(v => /^pt/i.test(v.lang)); } catch (e) { return []; } }
+function escolherVoz() {
+  const vs = vozesPt(); if (!vs.length) return {voz: null, masc: false};
+  let salva = null; try { salva = localStorage.getItem(VOZ); } catch (e) {}
+  const s = salva && vs.find(v => v.name === salva); if (s) return {voz: s, masc: !FEM.test(s.name)};
+  const br = vs.filter(v => /br/i.test(v.lang));
+  const m = br.find(v => MASC.test(v.name)) || vs.find(v => MASC.test(v.name));
+  if (m) return {voz: m, masc: true};
+  return {voz: br[0] || vs[0], masc: false};
 }
+function falar(t, curto) {
+  $('status').textContent = t;
+  try {
+    const u = new SpeechSynthesisUtterance(curto || t); u.lang = 'pt-BR';
+    const {voz, masc} = escolherVoz();
+    if (voz) { u.voice = voz; u.lang = voz.lang; }
+    u.pitch = masc ? 0.9 : 0.55;  // sem voz masculina no aparelho: engrossa a voz
+    u.rate = 1.05;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch (e) {}
+}
+function preencherVozes() {
+  const sel = $('cVoz'); if (!sel) return;
+  const vs = vozesPt(), atual = escolherVoz().voz;
+  sel.innerHTML = vs.length ? '' : '<option value="">Voz padrão do aparelho</option>';
+  for (const v of vs) { const o = document.createElement('option'); o.value = v.name; o.textContent = v.name + (MASC.test(v.name) ? ' (masculina)' : ''); if (atual && v.name === atual.name) o.selected = true; sel.appendChild(o); }
+}
+try { speechSynthesis.onvoiceschanged = preencherVozes; } catch (e) {}
 
 // ---------- Números falados ----------
 const NUM = {zero:0,um:1,uma:1,dois:2,duas:2,'três':3,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,onze:11,doze:12,treze:13,quatorze:14,catorze:14,quinze:15,dezesseis:16,dezasseis:16,dezessete:17,dezoito:18,dezenove:19,vinte:20,trinta:30,quarenta:40,cinquenta:50,'cinqüenta':50,sessenta:60,setenta:70,oitenta:80,noventa:90,cem:100,cento:100,duzentos:200,duzentas:200,trezentos:300,trezentas:300,quatrocentos:400,quinhentos:500,quinhentas:500,seiscentos:600,setecentos:700,oitocentos:800,novecentos:900,
@@ -337,13 +368,13 @@ function comando(raw) {
     const palavras = x.split(' ').filter(w => w.length > 2 && !FILLER.has(w) && !RX.desfaz.test(w) && !/ultim/.test(w));
     for (const w of palavras) { const f = p.slice().reverse().find(m => sem(m.d.toLowerCase()).includes(w)); if (f) { alvo = f; break; } }
     st.mov = st.mov.filter(m => m !== alvo); checaLimite(); save(); render();
-    return falar('Apaguei ' + alvo.d.toLowerCase() + ' de ' + brl(Math.abs(alvo.v)) + '.');
+    return falar('Apaguei ' + alvo.d.toLowerCase() + ' de ' + brl(Math.abs(alvo.v)) + '.', 'Apagado');
   }
   // 2) corrigir o último valor: "na verdade foi 15", "errei, era 12"
   if (n.length && (RX.corrige.test(x) || /\b(nao era|nao foi|errei|me enganei)\b/.test(x)) && p.length) {
     const last = p[p.length - 1], v = n[n.length - 1];
     last.v = last.v < 0 ? -v : v; st.avisado = false; save(); checaLimite(); render();
-    return falar('Corrigido: ' + last.d.toLowerCase() + ' agora é ' + brl(v) + '.' + (st.limite ? ' Ainda pode usar ' + brl(Math.max(0, restante())) + '.' : ''));
+    return falar('Corrigido: ' + last.d.toLowerCase() + ' agora é ' + brl(v) + '.' + (st.limite ? ' Ainda pode usar ' + brl(Math.max(0, restante())) + '.' : ''), 'Corrigido');
   }
   // 3) perguntas sem valor
   if (!n.length && (RX.pergunta.test(x) || RX.podeGastar.test(x))) {
@@ -379,7 +410,7 @@ function comando(raw) {
     else if (/\bquinzena\b/.test(x)) tipo = '15';
     else if (/\bsemana\b/.test(x)) tipo = '7';
     novoPeriodo(saldoV, limiteV, tipo);
-    return falar('Beleza. Você tem ' + brl(saldoV) + ' e pode usar ' + brl(limiteV) + (tipo === 'mes' ? ' até o fim do mês.' : ' nos próximos ' + tipo + ' dias.'));
+    return falar('Beleza. Você tem ' + brl(saldoV) + ' e pode usar ' + brl(limiteV) + (tipo === 'mes' ? ' até o fim do mês.' : ' nos próximos ' + tipo + ' dias.'), 'Anotado');
   }
   // 6) entrada de dinheiro
   const ehEntrada = RX.entrada.test(x) || (/\bpix\b/.test(x) && /\b(recebi|caiu|entrou|chegou|me mandou|me mandaram)\b/.test(x));
@@ -388,7 +419,7 @@ function comando(raw) {
     for (const it of lista) st.mov.push({t: Date.now(), v: it.v, d: it.d === 'Sem descrição' ? 'Entrada' : it.d});
     save(); render();
     const tot = lista.reduce((a, i) => a + i.v, 0);
-    return falar('Anotado, entrou ' + brl(tot) + '. Saldo agora: ' + brl(saldo()) + '.');
+    return falar('Anotado, entrou ' + brl(tot) + '. Saldo agora: ' + brl(saldo()) + '.', 'Anotado');
   }
   // 7) qualquer outra frase com valor = gasto
   const agora = Date.now();
@@ -396,7 +427,7 @@ function comando(raw) {
   save();
   const bateu = checaLimite(); render();
   if (bateu) return;
-  return falar(falarGasto(lista));
+  return falar(falarGasto(lista), 'Anotado');
 }
 
 // ---------- Único alerta: bateu o limite ----------
@@ -443,8 +474,9 @@ $('btnTxt').onclick = () => { const v = $('txt').value.trim(); if (v) { comando(
 $('txt').onkeydown = e => { if (e.key === 'Enter') $('btnTxt').click(); };
 
 // ---------- Ajustes ----------
-$('btnCfg').onclick = () => { $('cSaldo').value = st.saldoIni || ''; $('cLimite').value = st.limite || ''; $('cPer').value = ['mes', '15', '30'].includes(st.tipo) ? st.tipo : 'mes'; $('cfg').showModal(); };
+$('btnCfg').onclick = () => { preencherVozes(); $('cSaldo').value = st.saldoIni || ''; $('cLimite').value = st.limite || ''; $('cPer').value = ['mes', '15', '30'].includes(st.tipo) ? st.tipo : 'mes'; $('cfg').showModal(); };
 $('cCancel').onclick = () => $('cfg').close();
+$('cVoz').onchange = () => { try { localStorage.setItem(VOZ, $('cVoz').value); } catch (e) {} falar('Voz escolhida.', 'Anotado'); };
 $('cSave').onclick = () => { novoPeriodo(Number($('cSaldo').value) || 0, Number($('cLimite').value) || 0, $('cPer').value); $('cfg').close(); };
 $('cReset').onclick = () => { if (confirm('Apagar todos os dados do Jarvis?')) { try { localStorage.removeItem(KEY); } catch (e) {} st = load(); render(); $('cfg').close(); } };
 
