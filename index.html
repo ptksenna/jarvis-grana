@@ -7,7 +7,7 @@
 <title>Jarvis Grana</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
 :root{--bg:#000;--card:#0b0f0b;--line:#1a2a1a;--neon:#39ff14;--neon2:#00ff88;--txt:#e9ffe9;--mut:#7d9a7d;--red:#ff3b5c}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -57,9 +57,33 @@ dialog .acts{display:flex;gap:8px;margin-top:18px}
 dialog .acts button{flex:1;padding:12px;border-radius:12px;border:1px solid var(--line);background:none;color:var(--txt);font-size:15px}
 dialog .acts .ok{background:var(--neon);color:#000;border:0;font-weight:700}
 .danger{color:var(--red)!important;border-color:var(--red)!important}
+
+body{padding-bottom:110px}
+.bottom{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,0,0,0),#000 35%);padding:18px 16px calc(14px + env(safe-area-inset-bottom));display:flex;justify-content:center;gap:10px;z-index:5}
+.bottom button{max-width:488px;flex:1;background:var(--neon);color:#000;border:0;border-radius:14px;padding:15px;font-size:16px;font-weight:800;box-shadow:0 0 20px rgba(57,255,20,.45)}
+.bottom button.sec{flex:0 0 auto;background:#0b0f0b;color:var(--neon);border:1px solid var(--neon);box-shadow:none;padding:15px 16px}
+#login{position:fixed;inset:0;background:#000;z-index:20;display:none;flex-direction:column;justify-content:center;padding:24px;max-width:420px;margin:0 auto}
+#login.show{display:flex}
+#login h2{font-size:26px;letter-spacing:2px;text-align:center}
+#login h2 span{color:var(--neon);text-shadow:0 0 12px var(--neon)}
+#login p{color:var(--mut);text-align:center;margin:10px 0 22px;font-size:14px;line-height:1.5}
+#login input{width:100%;background:#050805;border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:14px;font-size:16px;margin-bottom:10px}
+#login input:focus{outline:none;border-color:var(--neon)}
+#login button{width:100%;background:var(--neon);color:#000;border:0;border-radius:12px;padding:15px;font-size:16px;font-weight:800;margin-top:6px}
+#lErr{color:var(--red);text-align:center;min-height:20px;font-size:14px;margin-top:10px}
 </style>
 </head>
 <body>
+
+<div id="login">
+  <h2>JARVIS <span>GRANA</span></h2>
+  <p id="lMsg"></p>
+  <input id="lUser" placeholder="Login" autocomplete="username" autocapitalize="none">
+  <input id="lPass" type="password" placeholder="Senha" autocomplete="current-password">
+  <input id="lPass2" type="password" placeholder="Repita a senha" autocomplete="new-password" style="display:none">
+  <button id="lBtn">Entrar</button>
+  <div id="lErr"></div>
+</div>
 
 <header>
   <h1>JARVIS <span>GRANA</span></h1>
@@ -108,6 +132,17 @@ dialog .acts .ok{background:var(--neon);color:#000;border:0;font-weight:700}
 
 <footer>Jarvis Grana · seus dados ficam só neste aparelho</footer>
 
+<div class="bottom">
+  <button id="btnInstall">📲 Baixar o aplicativo</button>
+  <button class="sec" id="btnBell" aria-label="Ativar aviso de limite">🔔</button>
+</div>
+
+<dialog id="instDlg">
+  <h3>Baixar o aplicativo</h3>
+  <div class="hint" id="instTxt" style="font-size:15px;line-height:1.7"></div>
+  <div class="acts"><button class="ok" onclick="this.closest('dialog').close()">Entendi</button></div>
+</dialog>
+
 <dialog id="cfg">
   <h3>Ajustar período</h3>
   <label>Quanto eu tenho (R$)<input id="cSaldo" type="number" inputmode="decimal" step="0.01"></label>
@@ -123,7 +158,7 @@ dialog .acts .ok{background:var(--neon);color:#000;border:0;font-weight:700}
     <button id="cCancel">Cancelar</button>
     <button class="ok" id="cSave">Salvar</button>
   </div>
-  <div class="acts"><button class="danger" id="cReset">Zerar tudo</button></div>
+  <div class="acts"><button id="cSair">Sair da conta</button><button class="danger" id="cReset">Zerar tudo</button></div>
 </dialog>
 
 <script>
@@ -281,8 +316,8 @@ function checaLimite() {
   falar(msg);
   try {
     if ('Notification' in window && Notification.permission === 'granted') {
-      if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then(r => r.showNotification('Jarvis Grana', {body: msg, icon: 'icon.svg'}));
-      else new Notification('Jarvis Grana', {body: msg, icon: 'icon.svg'});
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then(r => r.showNotification('Jarvis Grana', {body: msg, icon: 'icon-192.png'}));
+      else new Notification('Jarvis Grana', {body: msg, icon: 'icon-192.png'});
     }
   } catch (e) {}
   setTimeout(() => alert(msg), 300);
@@ -322,6 +357,69 @@ $('cReset').onclick = () => { if (confirm('Apagar todos os dados do Jarvis?')) {
 
 // período venceu? avisa para começar outro
 if (st.limite && Date.now() > st.fim) $('status').textContent = 'O período acabou. Diga quanto tem e quanto pode usar agora.';
+
+
+// ---------- Login (só uma vez por aparelho) ----------
+const AUTH = 'jarvisGrana.auth', SESS = 'jarvisGrana.sess';
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+async function hash(t) {
+  try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('jarvis-grana:' + t)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+  catch (e) { let h = 0; for (const c of t) h = (h * 31 + c.charCodeAt(0)) | 0; return 'x' + h; }
+}
+function telaLogin() {
+  const temConta = !!lsGet(AUTH);
+  $('lMsg').textContent = temConta ? 'Entre com seu login e senha.' : 'Primeiro acesso: crie seu login e senha. Você só vai precisar digitar uma vez neste aparelho.';
+  $('lPass2').style.display = temConta ? 'none' : 'block';
+  $('lBtn').textContent = temConta ? 'Entrar' : 'Criar meu acesso';
+  $('lErr').textContent = ''; $('login').classList.add('show');
+}
+async function entrar() {
+  const u = $('lUser').value.trim().toLowerCase(), p = $('lPass').value;
+  if (!u || !p) { $('lErr').textContent = 'Preencha login e senha.'; return; }
+  const h = await hash(u + ':' + p), salvo = lsGet(AUTH);
+  if (!salvo) {
+    if (p.length < 4) { $('lErr').textContent = 'A senha precisa ter pelo menos 4 caracteres.'; return; }
+    if (p !== $('lPass2').value) { $('lErr').textContent = 'As senhas não batem.'; return; }
+    lsSet(AUTH, h);
+  } else if (salvo !== h) { $('lErr').textContent = 'Login ou senha errados.'; return; }
+  lsSet(SESS, h); $('lPass').value = $('lPass2').value = '';
+  $('login').classList.remove('show');
+}
+$('lBtn').onclick = entrar;
+['lUser', 'lPass', 'lPass2'].forEach(id => $(id).onkeydown = e => { if (e.key === 'Enter') entrar(); });
+if (!lsGet(AUTH) || lsGet(SESS) !== lsGet(AUTH)) telaLogin();
+$('cSair').onclick = () => { try { localStorage.removeItem(SESS); } catch (e) {} $('cfg').close(); $('lUser').value = ''; telaLogin(); };
+
+// ---------- Baixar o aplicativo ----------
+let promptInstalar = null;
+const instalado = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); promptInstalar = e; });
+window.addEventListener('appinstalled', () => { $('btnInstall').textContent = '✅ Aplicativo instalado'; promptInstalar = null; });
+if (instalado()) $('btnInstall').textContent = '✅ Aplicativo instalado';
+$('btnInstall').onclick = async () => {
+  if (instalado()) { falar('O aplicativo já está instalado.'); return; }
+  if (promptInstalar) { promptInstalar.prompt(); const r = await promptInstalar.userChoice; promptInstalar = null; if (r.outcome === 'accepted') $('btnInstall').textContent = '✅ Aplicativo instalado'; return; }
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  $('instTxt').innerHTML = ios
+    ? 'No iPhone, abra no <b>Safari</b>, toque no botão <b>Compartilhar</b> (quadrado com seta) e depois em <b>Adicionar à Tela de Início</b>.'
+    : 'Toque nos <b>3 pontinhos ⋮</b> do Chrome e escolha <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.';
+  $('instDlg').showModal();
+};
+
+// ---------- Aviso de limite (sininho) ----------
+function bell() {
+  const ok = 'Notification' in window && Notification.permission === 'granted';
+  $('btnBell').textContent = ok ? '🔔' : '🔕'; $('btnBell').style.opacity = ok ? 1 : .6;
+}
+$('btnBell').onclick = async () => {
+  if (!('Notification' in window)) { falar('Este navegador não mostra notificações. O aviso vai aparecer dentro do app.'); return; }
+  if (Notification.permission === 'granted') { falar('Aviso ligado. Só te aviso quando bater o limite.'); return; }
+  if (Notification.permission === 'denied') { falar('As notificações estão bloqueadas. Libere nas configurações do site no navegador.'); return; }
+  const r = await Notification.requestPermission(); bell();
+  falar(r === 'granted' ? 'Pronto, aviso ligado. Só te aviso quando bater o limite.' : 'Tudo bem, o aviso vai aparecer só dentro do app.');
+};
+bell();
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 window.__jarvis = {comando, normaliza, get st() { return st; }};
